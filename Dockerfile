@@ -1,32 +1,28 @@
-# Use official PHP image with Apache
 FROM php:8.0-apache
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libzip-dev zip unzip git curl \
     && docker-php-ext-install pdo_mysql zip
 
-# Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy project files
 COPY . .
 
-# Install Composer globally
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions for Laravel storage and cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expose port 80
+# IMPORTANT FIX
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
+
 EXPOSE 80
 
-# Start Apache
 CMD ["apache2-foreground"]
